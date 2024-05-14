@@ -47,8 +47,10 @@ func newApiConfig() *apiConfig {
 }
 
 func (cfg *apiConfig) middlewareMetrics(next http.Handler) http.Handler {
-	cfg.fileserverHits++
-	return next
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.fileserverHits++
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (cfg *apiConfig) metricsReport() []byte {
