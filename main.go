@@ -14,11 +14,11 @@ func main() {
 	cfg := newApiConfig()
 	mux := http.NewServeMux()
 
-	fileSrv := http.StripPrefix("/app", http.FileServer(http.Dir(root)))
-	mux.Handle("/app/*", cfg.middlewareMetrics(fileSrv))
-	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/metrics", cfg.handlerMetrics)
-	mux.HandleFunc("/reset", cfg.handlerMetricsReset)
+	fileServer := http.StripPrefix("/app", http.FileServer(http.Dir(root)))
+	mux.Handle("/app/*", cfg.middlewareMetrics(fileServer))
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/metrics", cfg.handlerMetrics)
+	mux.HandleFunc("/api/reset", cfg.handlerMetricsReset)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
