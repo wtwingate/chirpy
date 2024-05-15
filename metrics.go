@@ -5,17 +5,6 @@ import (
 	"net/http"
 )
 
-type apiConfig struct {
-	fileserverHits int
-}
-
-func newApiConfig() *apiConfig {
-	cfg := apiConfig{
-		fileserverHits: 0,
-	}
-	return &cfg
-}
-
 func (cfg *apiConfig) middlewareMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.fileserverHits++

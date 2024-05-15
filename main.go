@@ -5,6 +5,19 @@ import (
 	"net/http"
 )
 
+type apiConfig struct {
+	chirpCount     int
+	fileserverHits int
+}
+
+func newApiConfig() *apiConfig {
+	cfg := apiConfig{
+		chirpCount:     0,
+		fileserverHits: 0,
+	}
+	return &cfg
+}
+
 func main() {
 	const root = "."
 	const port = "8080"
@@ -18,7 +31,8 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("/api/reset", cfg.handlerMetricsReset)
-	mux.HandleFunc("/api/validate_chirp", handlerValidation)
+	mux.HandleFunc("POST /api/chirps", cfg.handlerPostChirps)
+	mux.HandleFunc("GET /api/chirps", cfg.handlerGetChirps)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

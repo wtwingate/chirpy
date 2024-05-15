@@ -7,7 +7,16 @@ import (
 	"strings"
 )
 
-func handlerValidation(w http.ResponseWriter, r *http.Request) {
+type ChirpBody struct {
+	ID   int    `json:"id"`
+	Body string `json:"body"`
+}
+
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	// respond with an Array of all chirps, sorted by ID
+}
+
+func (cfg *apiConfig) handlerPostChirps(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}
@@ -25,10 +34,10 @@ func handlerValidation(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 400, "Chirp is too long")
 	} else {
 		responseBody := filterProfanity(params.Body)
-		respondWithJSON(w, 200, struct {
-			CleanedBody string `json:"cleaned_body"`
-		}{
-			CleanedBody: responseBody,
+		cfg.chirpCount++
+		respondWithJSON(w, 201, ChirpBody{
+			ID:   cfg.chirpCount,
+			Body: responseBody,
 		})
 	}
 }
