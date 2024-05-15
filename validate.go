@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func handlerValidation(w http.ResponseWriter, r *http.Request) {
@@ -23,10 +24,24 @@ func handlerValidation(w http.ResponseWriter, r *http.Request) {
 	if len(params.Body) > 140 {
 		respondWithError(w, 400, "Chirp is too long")
 	} else {
+		responseBody := filterProfanity(params.Body)
 		respondWithJSON(w, 200, struct {
-			Valid bool `json:"valid"`
+			CleanedBody string `json:"cleaned_body"`
 		}{
-			Valid: true,
+			CleanedBody: responseBody,
 		})
 	}
+}
+
+func filterProfanity(msg string) string {
+	badWords := []string{"kerfuffle", "sharbert", "fornax"}
+	for _, word := range strings.Fields(msg) {
+		for _, badWord := range badWords {
+			if strings.ToLower(word) == badWord {
+				cleaned := strings.Split(msg, word)
+				msg = strings.Join(cleaned, "****")
+			}
+		}
+	}
+	return msg
 }
