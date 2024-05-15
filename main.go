@@ -3,17 +3,24 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/wtwingate/chirpy/internal/database"
 )
 
 type apiConfig struct {
-	chirpCount     int
-	fileserverHits int
+	db     *database.DB
+	fsHits int
 }
 
-func newApiConfig() *apiConfig {
+func newApiConfig(dbPath string) *apiConfig {
+	db, err := database.NewDB(dbPath)
+	if err != nil {
+		log.Fatal("could not establish database connection: ", err)
+	}
+
 	cfg := apiConfig{
-		chirpCount:     0,
-		fileserverHits: 0,
+		db:     db,
+		fsHits: 0,
 	}
 	return &cfg
 }
@@ -22,7 +29,7 @@ func main() {
 	const root = "."
 	const port = "8080"
 
-	cfg := newApiConfig()
+	cfg := newApiConfig("./database.json")
 	mux := http.NewServeMux()
 
 	fsHandler := cfg.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(root))))

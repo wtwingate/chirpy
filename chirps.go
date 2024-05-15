@@ -7,11 +7,6 @@ import (
 	"strings"
 )
 
-type ChirpBody struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
-}
-
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	// respond with an Array of all chirps, sorted by ID
 }
@@ -33,12 +28,14 @@ func (cfg *apiConfig) handlerPostChirps(w http.ResponseWriter, r *http.Request) 
 	if len(params.Body) > 140 {
 		respondWithError(w, 400, "Chirp is too long")
 	} else {
-		responseBody := filterProfanity(params.Body)
-		cfg.chirpCount++
-		respondWithJSON(w, 201, ChirpBody{
-			ID:   cfg.chirpCount,
-			Body: responseBody,
-		})
+		cleanBody := filterProfanity(params.Body)
+		chirp, err := cfg.db.NewChirp(cleanBody)
+		if err != nil {
+			log.Printf("error posting chirp: %v\n", err)
+			w.WriteHeader(500)
+			return
+		}
+		respondWithJSON(w, 201, chirp)
 	}
 }
 
