@@ -52,6 +52,25 @@ func (db *DB) NewUser(email string, password string) (User, error) {
 	return newUser, nil
 }
 
+func (db *DB) LoginUser(email string, password string) (User, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	loginUser, ok := dbStruct.Users[email]
+	if !ok {
+		return User{}, errors.New("user not found")
+	}
+
+	err = bcrypt.CompareHashAndPassword(loginUser.Hash, []byte(password))
+	if err != nil {
+		return User{}, err
+	}
+
+	return loginUser, nil
+}
+
 // Create a new chirp and save it to the database.
 func (db *DB) NewChirp(body string) (Chirp, error) {
 	dbStruct, err := db.loadDB()
