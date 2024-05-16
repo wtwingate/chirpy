@@ -1,11 +1,15 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/wtwingate/chirpy/internal/database"
 )
+
+const dbPath = "./database.json"
 
 type apiConfig struct {
 	db     *database.DB
@@ -26,10 +30,16 @@ func newApiConfig(dbPath string) *apiConfig {
 }
 
 func main() {
+	debug := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *debug {
+		os.Remove(dbPath)
+	}
+
 	const root = "."
 	const port = "8080"
 
-	cfg := newApiConfig("./database.json")
+	cfg := newApiConfig(dbPath)
 	mux := http.NewServeMux()
 
 	fsHandler := cfg.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(root))))
