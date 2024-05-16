@@ -26,7 +26,7 @@ func (db *DB) NewChirp(body string) (Chirp, error) {
 	}
 
 	newChirp := Chirp{
-		ID:   len(dbStruct.Chirps),
+		ID:   len(dbStruct.Chirps) + 1,
 		Body: body,
 	}
 	dbStruct.Chirps[newChirp.ID] = newChirp
@@ -45,7 +45,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		return []Chirp{}, err
 	}
 
-	chirpSlice := make([]Chirp, len(dbStruct.Chirps))
+	chirpSlice := []Chirp{}
 	for _, v := range dbStruct.Chirps {
 		chirpSlice = append(chirpSlice, v)
 	}
@@ -84,6 +84,10 @@ func (db *DB) loadDB() (DBStructure, error) {
 	chirpMap := make(map[int]Chirp)
 	dbStruct := DBStructure{
 		Chirps: chirpMap,
+	}
+
+	if len(data) == 0 {
+		return dbStruct, nil
 	}
 
 	err = json.Unmarshal(data, &dbStruct)

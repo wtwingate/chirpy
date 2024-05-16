@@ -8,7 +8,13 @@ import (
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	// respond with an Array of all chirps, sorted by ID
+	chirps, err := cfg.db.GetChirps()
+	if err != nil {
+		log.Printf("error getting chirps")
+		w.WriteHeader(500)
+		return
+	}
+	respondWithJSON(w, 200, chirps)
 }
 
 func (cfg *apiConfig) handlerPostChirps(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +32,7 @@ func (cfg *apiConfig) handlerPostChirps(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if len(params.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long")
+		respondWithError(w, 400, "chirp is too long")
 	} else {
 		cleanBody := filterProfanity(params.Body)
 		chirp, err := cfg.db.NewChirp(cleanBody)
