@@ -12,6 +12,7 @@ type Chirp struct {
 type User struct {
 	ID    int    `json:"id"`
 	Email string `json:"email"`
+	Hash  []byte `json:"hash"`
 }
 
 type DB struct {
@@ -21,5 +22,5 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Users  map[string]User  `json:"users"`
 }

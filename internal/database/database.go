@@ -8,6 +8,8 @@ import (
 	"os"
 	"slices"
 	"sync"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Establish a database connection and create a new database
@@ -21,8 +23,17 @@ func NewDB(path string) (*DB, error) {
 }
 
 // Create a new user and save it to the database
-func (db *DB) NewUser(email string) (User, error) {
+func (db *DB) NewUser(email string, password string) (User, error) {
 	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	if _, ok := dbStruct.Users[email]; ok {
+		return User{}, errors.New("email address is already registered")
+	}
+
+	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return User{}, err
 	}
@@ -30,8 +41,9 @@ func (db *DB) NewUser(email string) (User, error) {
 	newUser := User{
 		ID:    len(dbStruct.Users) + 1,
 		Email: email,
+		Hash:  pwHash,
 	}
-	dbStruct.Users[newUser.ID] = newUser
+	dbStruct.Users[newUser.Email] = newUser
 
 	err = db.writeDB(dbStruct)
 	if err != nil {
@@ -118,7 +130,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 	}
 
 	chirpMap := make(map[int]Chirp)
-	userMap := make(map[int]User)
+	userMap := make(map[string]User)
 	dbStruct := DBStructure{
 		Chirps: chirpMap,
 		Users:  userMap,
