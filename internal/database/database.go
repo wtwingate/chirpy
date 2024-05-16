@@ -1,8 +1,10 @@
 package database
 
 import (
+	"cmp"
 	"encoding/json"
 	"os"
+	"slices"
 	"sync"
 )
 
@@ -37,7 +39,22 @@ func (db *DB) NewChirp(body string) (Chirp, error) {
 }
 
 // Return an array of all chirps in the database.
-func (db *DB) GetChirps() ([]Chirp, error)
+func (db *DB) GetChirps() ([]Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return []Chirp{}, err
+	}
+
+	chirpSlice := make([]Chirp, len(dbStruct.Chirps))
+	for _, v := range dbStruct.Chirps {
+		chirpSlice = append(chirpSlice, v)
+	}
+
+	slices.SortFunc(chirpSlice, func(a, b Chirp) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+	return chirpSlice, nil
+}
 
 // Create a new database if one does not exist
 func (db *DB) ensureDB() error {
