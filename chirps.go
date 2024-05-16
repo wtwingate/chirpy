@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -17,7 +18,24 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, 200, chirps)
 }
 
-func (cfg *apiConfig) handlerPostChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request) {
+	chirpID, err := strconv.Atoi(r.PathValue("chirpID"))
+	if err != nil {
+		log.Printf("error with chirpID: %v\n", err)
+		w.WriteHeader(404)
+		return
+	}
+
+	chirp, err := cfg.db.GetChirpByID(chirpID)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(404)
+		return
+	}
+	respondWithJSON(w, 200, chirp)
+}
+
+func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}

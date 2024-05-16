@@ -3,6 +3,8 @@ package database
 import (
 	"cmp"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"slices"
 	"sync"
@@ -16,6 +18,26 @@ func NewDB(path string) (*DB, error) {
 		mux:  new(sync.RWMutex),
 	}
 	return &db, db.ensureDB()
+}
+
+// Create a new user and save it to the database
+func (db *DB) NewUser(email string) (User, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	newUser := User{
+		ID:    len(dbStruct.Users) + 1,
+		Email: email,
+	}
+	dbStruct.Users[newUser.ID] = newUser
+
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return newUser, nil
 }
 
 // Create a new chirp and save it to the database.
@@ -56,6 +78,20 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirpSlice, nil
 }
 
+func (db *DB) GetChirpByID(id int) (Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	chirp, ok := dbStruct.Chirps[id]
+	if !ok {
+		errMsg := fmt.Sprintf("error: could not find chirp ID %v", id)
+		return Chirp{}, errors.New(errMsg)
+	}
+	return chirp, nil
+}
+
 // Create a new database if one does not exist
 func (db *DB) ensureDB() error {
 	db.mux.Lock()
@@ -82,8 +118,10 @@ func (db *DB) loadDB() (DBStructure, error) {
 	}
 
 	chirpMap := make(map[int]Chirp)
+	userMap := make(map[int]User)
 	dbStruct := DBStructure{
 		Chirps: chirpMap,
+		Users:  userMap,
 	}
 
 	if len(data) == 0 {
