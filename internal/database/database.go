@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"sync"
 
 	"golang.org/x/crypto/bcrypt"
@@ -48,13 +49,50 @@ func (db *DB) NewUser(email string, password string) (User, error) {
 	return newUser, nil
 }
 
-func (db *DB) GetUser(id int) (User, error) {
+func (db *DB) UpdateUser(id string, email string, password string) (User, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return User{}, err
 	}
 
-	user, ok := dbStruct.Users[id]
+	intID, err := strconv.Atoi(id)
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStruct.Users[intID]
+	if !ok {
+		return User{}, errors.New("could not find user")
+	}
+
+	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return User{}, err
+	}
+
+	user.Email = email
+	user.Hash = pwHash
+	dbStruct.Users[intID] = user
+
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return User{}, err
+	}
+	return user, nil
+}
+
+func (db *DB) GetUser(id string) (User, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	intID, err := strconv.Atoi(id)
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStruct.Users[intID]
 	if !ok {
 		return User{}, errors.New("could not find user")
 	}

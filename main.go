@@ -13,21 +13,21 @@ import (
 const dbPath = "./database.json"
 
 type apiConfig struct {
-	db     *database.DB
-	jwt    string
-	fsHits int
+	db        *database.DB
+	jwtSecret string
+	fsHits    int
 }
 
-func newApiConfig(dbPath string, jwt string) *apiConfig {
+func newApiConfig(dbPath string, jwtSecret string) *apiConfig {
 	db, err := database.NewDB(dbPath)
 	if err != nil {
 		log.Fatal("could not establish database connection: ", err)
 	}
 
 	cfg := apiConfig{
-		db:     db,
-		jwt:    jwt,
-		fsHits: 0,
+		db:        db,
+		jwtSecret: jwtSecret,
+		fsHits:    0,
 	}
 	return &cfg
 }
