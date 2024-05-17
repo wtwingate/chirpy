@@ -2,8 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+
+	"github.com/wtwingate/chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
@@ -17,22 +18,25 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Printf("error decoding parameters: %v\n", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, "unable to decode parameters")
 		return
 	}
 
-	loginUser, err := cfg.db.LoginUser(params.Email, params.Password)
+	user, err := cfg.DB.GetUserByEmail(params.Email)
 	if err != nil {
-		log.Printf("login error: %v\n", err)
-		w.WriteHeader(401)
+		respondWithError(w, http.StatusInternalServerError, "unable to find user")
 		return
 	}
 
-	newToken, err := cfg.createNewToken(loginUser, params.Lifetime)
+	err = auth.CheckHashPassword(params.Password, user.Hash)
 	if err != nil {
-		log.Printf("unable to create JWT: %v\n", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusUnauthorized, "invalid password")
+		return
+	}
+
+	newToken, err := auth.CreateNewToken(user.ID, cfg.jwtSecret, params.Lifetime)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "unable to create auth token")
 		return
 	}
 
@@ -41,10 +45,10 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 		Token string `json:"token"`
 	}{
-		ID:    loginUser.ID,
-		Email: loginUser.Email,
+		ID:    user.ID,
+		Email: user.Email,
 		Token: newToken,
 	}
 
-	respondWithJSON(w, 200, loginUserResp)
+	respondWithJSON(w, http.StatusOK, loginUserResp)
 }

@@ -1,17 +1,24 @@
 package database
 
 import (
-	"cmp"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
-	"slices"
-	"strconv"
 	"sync"
-
-	"golang.org/x/crypto/bcrypt"
 )
+
+var ErrNotExist = errors.New("resource does not exist")
+var ErrAlreadyExists = errors.New("resource already exists")
+
+type DB struct {
+	path string
+	mux  *sync.RWMutex
+}
+
+type DBStructure struct {
+	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
+}
 
 // Establish a database connection and create a new database
 // file if one does not exist.
@@ -21,162 +28,6 @@ func NewDB(path string) (*DB, error) {
 		mux:  new(sync.RWMutex),
 	}
 	return &db, db.ensureDB()
-}
-
-// Create a new user and save it to the database
-func (db *DB) NewUser(email string, password string) (User, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return User{}, err
-	}
-
-	newUser := User{
-		ID:    len(dbStruct.Users) + 1,
-		Email: email,
-		Hash:  pwHash,
-	}
-	dbStruct.Users[newUser.ID] = newUser
-
-	err = db.writeDB(dbStruct)
-	if err != nil {
-		return User{}, err
-	}
-	return newUser, nil
-}
-
-func (db *DB) UpdateUser(id string, email string, password string) (User, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	intID, err := strconv.Atoi(id)
-	if err != nil {
-		return User{}, err
-	}
-
-	user, ok := dbStruct.Users[intID]
-	if !ok {
-		return User{}, errors.New("could not find user")
-	}
-
-	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return User{}, err
-	}
-
-	user.Email = email
-	user.Hash = pwHash
-	dbStruct.Users[intID] = user
-
-	err = db.writeDB(dbStruct)
-	if err != nil {
-		return User{}, err
-	}
-	return user, nil
-}
-
-func (db *DB) GetUser(id string) (User, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	intID, err := strconv.Atoi(id)
-	if err != nil {
-		return User{}, err
-	}
-
-	user, ok := dbStruct.Users[intID]
-	if !ok {
-		return User{}, errors.New("could not find user")
-	}
-	return user, nil
-}
-
-func (db *DB) GetUserByEmail(email string) (User, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	for _, user := range dbStruct.Users {
-		if user.Email == email {
-			return user, nil
-		}
-	}
-	return User{}, errors.New("could not find user")
-}
-
-func (db *DB) LoginUser(email string, password string) (User, error) {
-	loginUser, err := db.GetUserByEmail(email)
-	if err != nil {
-		return User{}, err
-	}
-
-	err = bcrypt.CompareHashAndPassword(loginUser.Hash, []byte(password))
-	if err != nil {
-		return User{}, err
-	}
-
-	return loginUser, nil
-}
-
-// Create a new chirp and save it to the database.
-func (db *DB) NewChirp(body string) (Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	newChirp := Chirp{
-		ID:   len(dbStruct.Chirps) + 1,
-		Body: body,
-	}
-	dbStruct.Chirps[newChirp.ID] = newChirp
-
-	err = db.writeDB(dbStruct)
-	if err != nil {
-		return Chirp{}, err
-	}
-	return newChirp, nil
-}
-
-// Return an array of all chirps in the database.
-func (db *DB) GetChirps() ([]Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return []Chirp{}, err
-	}
-
-	chirpSlice := []Chirp{}
-	for _, v := range dbStruct.Chirps {
-		chirpSlice = append(chirpSlice, v)
-	}
-
-	slices.SortFunc(chirpSlice, func(a, b Chirp) int {
-		return cmp.Compare(a.ID, b.ID)
-	})
-	return chirpSlice, nil
-}
-
-func (db *DB) GetChirpByID(id int) (Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	chirp, ok := dbStruct.Chirps[id]
-	if !ok {
-		errMsg := fmt.Sprintf("error: could not find chirp ID %v", id)
-		return Chirp{}, errors.New(errMsg)
-	}
-	return chirp, nil
 }
 
 // Create a new database if one does not exist

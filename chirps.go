@@ -9,7 +9,7 @@ import (
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps()
+	chirps, err := cfg.DB.GetChirps()
 	if err != nil {
 		log.Printf("error getting chirps")
 		w.WriteHeader(500)
@@ -26,7 +26,7 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chirp, err := cfg.db.GetChirpByID(chirpID)
+	chirp, err := cfg.DB.GetChirpByID(chirpID)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(404)
@@ -53,7 +53,7 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 400, "chirp is too long")
 	} else {
 		cleanBody := filterProfanity(params.Body)
-		chirp, err := cfg.db.NewChirp(cleanBody)
+		chirp, err := cfg.DB.NewChirp(cleanBody)
 		if err != nil {
 			log.Printf("error posting chirp: %v\n", err)
 			w.WriteHeader(500)

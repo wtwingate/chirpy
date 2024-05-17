@@ -16,7 +16,8 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
-	metricsHTML := fmt.Sprintf(`<html>
+	metricsHTML := fmt.Sprintf(`
+<html>
 <body>
 	<h1>Welcome, Chirpy Admin</h1>
 	<p>Chirpy has been visited %d times!</p>
@@ -26,7 +27,7 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(metricsHTML))
 }
 
-func (cfg *apiConfig) handlerMetricsReset(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	cfg.fsHits = 0

@@ -13,7 +13,7 @@ import (
 const dbPath = "./database.json"
 
 type apiConfig struct {
-	db        *database.DB
+	DB        *database.DB
 	jwtSecret string
 	fsHits    int
 }
@@ -25,7 +25,7 @@ func newApiConfig(dbPath string, jwtSecret string) *apiConfig {
 	}
 
 	cfg := apiConfig{
-		db:        db,
+		DB:        db,
 		jwtSecret: jwtSecret,
 		fsHits:    0,
 	}
@@ -49,17 +49,21 @@ func main() {
 	mux := http.NewServeMux()
 
 	fsHandler := cfg.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(root))))
-
 	mux.Handle("/app/*", fsHandler)
+
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
-	mux.HandleFunc("/api/reset", cfg.handlerMetricsReset)
+	mux.HandleFunc("GET /api/reset", cfg.handlerReset)
+
 	mux.HandleFunc("POST /api/chirps", cfg.handlerNewChirp)
 	mux.HandleFunc("GET /api/chirps", cfg.handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirpByID)
+
 	mux.HandleFunc("POST /api/users", cfg.handlerNewUser)
 	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser)
+
 	mux.HandleFunc("POST /api/login", cfg.handlerLoginUser)
+
+	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

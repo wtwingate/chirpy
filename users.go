@@ -2,12 +2,25 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wtwingate/chirpy/internal/auth"
+	"github.com/wtwingate/chirpy/internal/database"
 )
+
+type request struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type response struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+}
 
 func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -16,43 +29,40 @@ func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
+	request := request{}
+	err := decoder.Decode(&request)
 	if err != nil {
-		log.Printf("error decoding parameters: %v\n", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, "unable to decode request parameters")
 		return
 	}
 
-	if _, err = cfg.db.GetUserByEmail(params.Email); err == nil {
-		log.Println("user already exists with that email")
-		w.WriteHeader(401)
-		return
-	}
-
-	newUser, err := cfg.db.NewUser(params.Email, params.Password)
+	pwHash, err := auth.HashPassword(request.Password)
 	if err != nil {
-		log.Printf("error creating new user: %v\n", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, "unable to hash password")
+	}
+
+	newUser, err := cfg.DB.CreateUser(request.Email, pwHash)
+	if err != nil {
+		if errors.Is(err, database.ErrAlreadyExists) {
+			respondWithError(w, http.StatusConflict, "user with that password already exists")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "unable to create user")
 		return
 	}
 
-	newUserResp := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-	}{
+	newUserResp := response{
 		ID:    newUser.ID,
 		Email: newUser.Email,
 	}
 
-	respondWithJSON(w, 201, newUserResp)
+	respondWithJSON(w, http.StatusCreated, newUserResp)
 }
 
 func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
 	tokenString := r.Header.Get("Authorization")
 	if len(tokenString) == 0 {
-		log.Println("missing authorization token")
-		w.WriteHeader(401)
+		respondWithError(w, http.StatusUnauthorized, "missing authorization token")
 		return
 	}
 
@@ -63,47 +73,40 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		return []byte(cfg.jwtSecret), nil
 	})
 	if err != nil {
-		log.Printf("authorization error: %v\n", err)
-		w.WriteHeader(401)
+		respondWithError(w, http.StatusUnauthorized, "invalid authorization token")
 		return
 	}
 
-	userID, err := token.Claims.GetSubject()
+	subject, err := token.Claims.GetSubject()
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(401)
+		respondWithError(w, http.StatusInternalServerError, "invalid authorization token")
 		return
 	}
 
-	type parameters struct {
-		Email    string
-		Password string
+	userID, err := strconv.Atoi(subject)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "invalid user ID")
+		return
 	}
 
-	params := parameters{}
+	request := request{}
 	decoder := json.NewDecoder(r.Body)
 
-	err = decoder.Decode(&params)
+	err = decoder.Decode(&request)
 	if err != nil {
-		log.Printf("could not decode parameters: %v\n", err)
-		w.WriteHeader(400)
+		respondWithError(w, http.StatusInternalServerError, "unable to decode request parameters")
 		return
 	}
 
-	updatedUser, err := cfg.db.UpdateUser(userID, params.Email, params.Password)
+	updatedUser, err := cfg.DB.UpdateUser(userID, request.Email, request.Password)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(500)
-		return
+		respondWithError(w, http.StatusInternalServerError, "unable to update user")
 	}
 
-	updatedUserResp := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-	}{
+	updatedUserResp := response{
 		ID:    updatedUser.ID,
 		Email: updatedUser.Email,
 	}
 
-	respondWithJSON(w, 200, updatedUserResp)
+	respondWithJSON(w, http.StatusOK, updatedUserResp)
 }
