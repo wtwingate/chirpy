@@ -23,11 +23,6 @@ type response struct {
 }
 
 func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
 	request := request{}
 	err := decoder.Decode(&request)
@@ -98,9 +93,16 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updatedUser, err := cfg.DB.UpdateUser(userID, request.Email, request.Password)
+	pwHash, err := auth.HashPassword(request.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "unable to hash password")
+		return
+	}
+
+	updatedUser, err := cfg.DB.UpdateUser(userID, request.Email, pwHash)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "unable to update user")
+		return
 	}
 
 	updatedUserResp := response{
