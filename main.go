@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/wtwingate/chirpy/internal/database"
 )
 
@@ -13,10 +14,11 @@ const dbPath = "./database.json"
 
 type apiConfig struct {
 	db     *database.DB
+	jwt    string
 	fsHits int
 }
 
-func newApiConfig(dbPath string) *apiConfig {
+func newApiConfig(dbPath string, jwt string) *apiConfig {
 	db, err := database.NewDB(dbPath)
 	if err != nil {
 		log.Fatal("could not establish database connection: ", err)
@@ -24,12 +26,16 @@ func newApiConfig(dbPath string) *apiConfig {
 
 	cfg := apiConfig{
 		db:     db,
+		jwt:    jwt,
 		fsHits: 0,
 	}
 	return &cfg
 }
 
 func main() {
+	godotenv.Load()
+	jwtSecret := os.Getenv("JWT_SECRET")
+
 	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 	if *debug {
@@ -39,7 +45,7 @@ func main() {
 	const root = "."
 	const port = "8080"
 
-	cfg := newApiConfig(dbPath)
+	cfg := newApiConfig(dbPath, jwtSecret)
 	mux := http.NewServeMux()
 
 	fsHandler := cfg.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(root))))
@@ -52,6 +58,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", cfg.handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirpByID)
 	mux.HandleFunc("POST /api/users", cfg.handlerNewUser)
+	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser)
 	mux.HandleFunc("POST /api/login", cfg.handlerLoginUser)
 
 	srv := &http.Server{

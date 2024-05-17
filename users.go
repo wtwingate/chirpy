@@ -21,6 +21,12 @@ func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err = cfg.db.GetUserByEmail(params.Email); err == nil {
+		log.Println("user already exists with that email")
+		w.WriteHeader(401)
+		return
+	}
+
 	newUser, err := cfg.db.NewUser(params.Email, params.Password)
 	if err != nil {
 		log.Printf("error creating new user: %v\n", err)
@@ -37,4 +43,11 @@ func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, 201, newUserResp)
+}
+
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email string
+		Password string
+	}
 }

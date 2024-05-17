@@ -10,6 +10,7 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Lifetime int    `json:"expires_in_seconds"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -28,12 +29,21 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newToken, err := cfg.createNewToken(loginUser, params.Lifetime)
+	if err != nil {
+		log.Printf("unable to create JWT: %v\n", err)
+		w.WriteHeader(500)
+		return
+	}
+
 	loginUserResp := struct {
 		ID    int    `json:"id"`
 		Email string `json:"email"`
+		Token string `json:"token"`
 	}{
 		ID:    loginUser.ID,
 		Email: loginUser.Email,
+		Token: newToken,
 	}
 
 	respondWithJSON(w, 200, loginUserResp)

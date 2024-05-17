@@ -29,10 +29,6 @@ func (db *DB) NewUser(email string, password string) (User, error) {
 		return User{}, err
 	}
 
-	if _, ok := dbStruct.Users[email]; ok {
-		return User{}, errors.New("email address is already registered")
-	}
-
 	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return User{}, err
@@ -43,7 +39,7 @@ func (db *DB) NewUser(email string, password string) (User, error) {
 		Email: email,
 		Hash:  pwHash,
 	}
-	dbStruct.Users[newUser.Email] = newUser
+	dbStruct.Users[newUser.ID] = newUser
 
 	err = db.writeDB(dbStruct)
 	if err != nil {
@@ -52,15 +48,37 @@ func (db *DB) NewUser(email string, password string) (User, error) {
 	return newUser, nil
 }
 
-func (db *DB) LoginUser(email string, password string) (User, error) {
+func (db *DB) GetUser(id int) (User, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return User{}, err
 	}
 
-	loginUser, ok := dbStruct.Users[email]
+	user, ok := dbStruct.Users[id]
 	if !ok {
-		return User{}, errors.New("user not found")
+		return User{}, errors.New("could not find user")
+	}
+	return user, nil
+}
+
+func (db *DB) GetUserByEmail(email string) (User, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	for _, user := range dbStruct.Users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return User{}, errors.New("could not find user")
+}
+
+func (db *DB) LoginUser(email string, password string) (User, error) {
+	loginUser, err := db.GetUserByEmail(email)
+	if err != nil {
+		return User{}, err
 	}
 
 	err = bcrypt.CompareHashAndPassword(loginUser.Hash, []byte(password))
@@ -149,7 +167,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 	}
 
 	chirpMap := make(map[int]Chirp)
-	userMap := make(map[string]User)
+	userMap := make(map[int]User)
 	dbStruct := DBStructure{
 		Chirps: chirpMap,
 		Users:  userMap,

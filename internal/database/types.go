@@ -22,5 +22,5 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[string]User  `json:"users"`
+	Users  map[int]User  `json:"users"`
 }
