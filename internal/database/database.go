@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"sync"
-	"time"
 )
 
 var ErrNotExist = errors.New("resource does not exist")
@@ -19,7 +18,7 @@ type DB struct {
 type DBStructure struct {
 	Chirps  map[int]Chirp
 	Users   map[int]User
-	Refresh map[string]time.Time
+	Refresh map[string]Refresh
 }
 
 // Establish a database connection and create a new database
@@ -59,9 +58,11 @@ func (db *DB) loadDB() (DBStructure, error) {
 
 	chirpMap := make(map[int]Chirp)
 	userMap := make(map[int]User)
+	refreshMap := make(map[string]Refresh)
 	dbStruct := DBStructure{
-		Chirps: chirpMap,
-		Users:  userMap,
+		Chirps:  chirpMap,
+		Users:   userMap,
+		Refresh: refreshMap,
 	}
 
 	if len(data) == 0 {

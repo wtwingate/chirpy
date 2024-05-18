@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/wtwingate/chirpy/internal/auth"
 )
 
-func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -39,7 +40,7 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	refreshToken, err := cfg.DB.CreateNewRefreshToken()
+	refreshToken, err := cfg.DB.CreateNewRefreshToken(user.ID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "unable to create refresh token")
 	}
@@ -57,4 +58,51 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, loginUserResp)
+}
+
+func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
+	refToken := r.Header.Get("Authorization")
+	if len(refToken) == 0 {
+		respondWithError(w, http.StatusUnauthorized, "missing authorization token")
+		return
+	}
+
+	refToken = strings.TrimPrefix(refToken, "Bearer ")
+
+	userID, err := cfg.DB.CheckRefreshToken(refToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid refresh token")
+	}
+
+	authToken, err := auth.CreateNewAuthToken(userID, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "unable to create auth token")
+		return
+	}
+
+	refreshResp := struct {
+		Token string `json:"token"`
+	}{
+		Token: authToken,
+	}
+
+	respondWithJSON(w, 200, refreshResp)
+}
+
+func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
+	refToken := r.Header.Get("Authorization")
+	if len(refToken) == 0 {
+		respondWithError(w, http.StatusUnauthorized, "missing authorization token")
+		return
+	}
+
+	refToken = strings.TrimPrefix(refToken, "Bearer ")
+
+	err := cfg.DB.RevokeRefreshToken(refToken)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "unable to revoke refresh token")
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return
 }
