@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 )
 
 var ErrNotExist = errors.New("resource does not exist")
@@ -16,8 +17,9 @@ type DB struct {
 }
 
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Chirps  map[int]Chirp
+	Users   map[int]User
+	Refresh map[string]time.Time
 }
 
 // Establish a database connection and create a new database

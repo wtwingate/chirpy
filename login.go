@@ -11,7 +11,6 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
-		Lifetime int    `json:"expires_in_seconds"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -34,20 +33,27 @@ func (cfg *apiConfig) handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newToken, err := auth.CreateNewToken(user.ID, cfg.jwtSecret, params.Lifetime)
+	authToken, err := auth.CreateNewAuthToken(user.ID, cfg.jwtSecret)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "unable to create auth token")
 		return
 	}
 
+	refreshToken, err := cfg.DB.CreateNewRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "unable to create refresh token")
+	}
+
 	loginUserResp := struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-		Token string `json:"token"`
+		ID      int    `json:"id"`
+		Email   string `json:"email"`
+		Token   string `json:"token"`
+		Refresh string `json:"refresh_token"`
 	}{
-		ID:    user.ID,
-		Email: user.Email,
-		Token: newToken,
+		ID:      user.ID,
+		Email:   user.Email,
+		Token:   authToken,
+		Refresh: refreshToken,
 	}
 
 	respondWithJSON(w, http.StatusOK, loginUserResp)

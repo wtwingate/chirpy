@@ -23,18 +23,12 @@ func CheckHashPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
-func CreateNewToken(userID int, jwtSecret string, lifetime int) (string, error) {
-	defaultLifetime := 24 * 60 * 60
-	if lifetime == 0 || lifetime > defaultLifetime {
-		lifetime = defaultLifetime
-	}
-
-	duration := time.Duration(lifetime) * time.Second
+func CreateNewAuthToken(userID int, jwtSecret string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(duration)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(1 * time.Hour)),
 		Subject:   strconv.Itoa(userID),
 	})
 	return token.SignedString([]byte(jwtSecret))
