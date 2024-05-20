@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,6 +11,7 @@ import (
 )
 
 var ErrNoAuthHeader = errors.New("no auth header in request")
+var ErrInvalidAuthToken = errors.New("invalid authentication token")
 
 func HashPassword(password string) (string, error) {
 	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -32,4 +34,28 @@ func CreateNewAuthToken(userID int, jwtSecret string) (string, error) {
 		Subject:   strconv.Itoa(userID),
 	})
 	return token.SignedString([]byte(jwtSecret))
+}
+
+func CheckAuthToken(secret, token string) (int, error) {
+	token = strings.TrimPrefix(token, "Bearer ")
+	claims := jwt.RegisteredClaims{}
+
+	jwtToken, err := jwt.ParseWithClaims(token, &claims, func(jwtToken *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return 0, ErrInvalidAuthToken
+	}
+
+	subject, err := jwtToken.Claims.GetSubject()
+	if err != nil {
+		return 0, ErrInvalidAuthToken
+	}
+
+	userID, err := strconv.Atoi(subject)
+	if err != nil {
+		return 0, ErrInvalidAuthToken
+	}
+
+	return userID, nil
 }

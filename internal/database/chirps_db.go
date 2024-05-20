@@ -8,20 +8,22 @@ import (
 )
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	Body     string `json:"body"`
+	AuthorID int    `json:"author_id"`
 }
 
 // Create a new chirp and save it to the database.
-func (db *DB) NewChirp(body string) (Chirp, error) {
+func (db *DB) NewChirp(userID int, body string) (Chirp, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
 	}
 
 	newChirp := Chirp{
-		ID:   len(dbStruct.Chirps) + 1,
-		Body: body,
+		ID:       len(dbStruct.Chirps) + 1,
+		Body:     body,
+		AuthorID: userID,
 	}
 	dbStruct.Chirps[newChirp.ID] = newChirp
 

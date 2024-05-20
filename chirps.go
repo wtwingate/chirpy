@@ -2,17 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/wtwingate/chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.DB.GetChirps()
 	if err != nil {
-		log.Printf("error getting chirps")
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	respondWithJSON(w, 200, chirps)
@@ -21,18 +21,16 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request) {
 	chirpID, err := strconv.Atoi(r.PathValue("chirpID"))
 	if err != nil {
-		log.Printf("error with chirpID: %v\n", err)
-		w.WriteHeader(404)
+		respondWithError(w, http.StatusNotFound, "invalid chirp ID")
 		return
 	}
 
 	chirp, err := cfg.DB.GetChirpByID(chirpID)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(404)
+		respondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	respondWithJSON(w, 200, chirp)
+	respondWithJSON(w, http.StatusOK, chirp)
 }
 
 func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
@@ -44,22 +42,31 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		log.Printf("error decoding parameters: %v\n", err)
-		w.WriteHeader(500)
+		respondWithError(w, http.StatusInternalServerError, "unable to decode parameters")
 		return
 	}
 
+	token := r.Header.Get("Authorization")
+	if len(token) == 0 {
+		respondWithError(w, http.StatusUnauthorized, "missing authorization token")
+		return
+	}
+
+	userID, err := auth.CheckAuthToken(cfg.jwtSecret, token)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
+
 	if len(params.Body) > 140 {
-		respondWithError(w, 400, "chirp is too long")
+		respondWithError(w, http.StatusBadRequest, "chirp is too long")
 	} else {
 		cleanBody := filterProfanity(params.Body)
-		chirp, err := cfg.DB.NewChirp(cleanBody)
+		chirp, err := cfg.DB.NewChirp(userID, cleanBody)
 		if err != nil {
-			log.Printf("error posting chirp: %v\n", err)
-			w.WriteHeader(500)
+			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		respondWithJSON(w, 201, chirp)
+		respondWithJSON(w, http.StatusCreated, chirp)
 	}
 }
 
