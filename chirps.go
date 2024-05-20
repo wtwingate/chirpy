@@ -33,7 +33,32 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, http.StatusOK, chirp)
 }
 
-func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	chirpID, err := strconv.Atoi(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "invalid chirp ID")
+		return
+	}
+
+	token := r.Header.Get("Authorization")
+	if len(token) == 0 {
+		respondWithError(w, http.StatusUnauthorized, "missing authorization token")
+		return
+	}
+
+	userID, err := auth.CheckAuthToken(cfg.jwtSecret, token)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
+
+	err = cfg.DB.DeleteChirp(chirpID, userID)
+	if err != nil {
+		respondWithError(w, http.StatusForbidden, err.Error())
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}
@@ -61,7 +86,7 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "chirp is too long")
 	} else {
 		cleanBody := filterProfanity(params.Body)
-		chirp, err := cfg.DB.NewChirp(userID, cleanBody)
+		chirp, err := cfg.DB.CreateChirp(userID, cleanBody)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return

@@ -14,7 +14,7 @@ type Chirp struct {
 }
 
 // Create a new chirp and save it to the database.
-func (db *DB) NewChirp(userID int, body string) (Chirp, error) {
+func (db *DB) CreateChirp(userID int, body string) (Chirp, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
@@ -32,6 +32,32 @@ func (db *DB) NewChirp(userID int, body string) (Chirp, error) {
 		return Chirp{}, err
 	}
 	return newChirp, nil
+}
+
+func (db *DB) DeleteChirp(chirpID, userID int) error {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	chirp, ok := dbStruct.Chirps[chirpID]
+	if !ok {
+		errMsg := fmt.Sprintf("could not find chirp %v", chirpID)
+		return errors.New(errMsg)
+	}
+
+	if userID != chirp.AuthorID {
+		return errors.New("unauthorized")
+	}
+
+	delete(dbStruct.Chirps, chirpID)
+
+	err = db.writeDB(dbStruct)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Return an array of all chirps in the database.
@@ -60,7 +86,7 @@ func (db *DB) GetChirpByID(id int) (Chirp, error) {
 
 	chirp, ok := dbStruct.Chirps[id]
 	if !ok {
-		errMsg := fmt.Sprintf("error: could not find chirp ID %v", id)
+		errMsg := fmt.Sprintf("could not find chirp %v", id)
 		return Chirp{}, errors.New(errMsg)
 	}
 	return chirp, nil
