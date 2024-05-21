@@ -15,10 +15,11 @@ const dbPath = "./database.json"
 type apiConfig struct {
 	DB        *database.DB
 	jwtSecret string
+	apiKey    string
 	fsHits    int
 }
 
-func newApiConfig(dbPath string, jwtSecret string) *apiConfig {
+func newApiConfig(dbPath, jwtSecret, apiKey string) *apiConfig {
 	db, err := database.NewDB(dbPath)
 	if err != nil {
 		log.Fatal("could not establish database connection: ", err)
@@ -27,6 +28,7 @@ func newApiConfig(dbPath string, jwtSecret string) *apiConfig {
 	cfg := apiConfig{
 		DB:        db,
 		jwtSecret: jwtSecret,
+		apiKey:    apiKey,
 		fsHits:    0,
 	}
 	return &cfg
@@ -35,6 +37,7 @@ func newApiConfig(dbPath string, jwtSecret string) *apiConfig {
 func main() {
 	godotenv.Load()
 	jwtSecret := os.Getenv("JWT_SECRET")
+	apiKey := os.Getenv("API_KEY")
 
 	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
@@ -45,7 +48,7 @@ func main() {
 	const root = "."
 	const port = "8080"
 
-	cfg := newApiConfig(dbPath, jwtSecret)
+	cfg := newApiConfig(dbPath, jwtSecret, apiKey)
 	mux := http.NewServeMux()
 
 	fsHandler := cfg.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(root))))
@@ -65,6 +68,8 @@ func main() {
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin)
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevoke)
+
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handlerPolkaWebhooks)
 
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 

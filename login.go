@@ -50,11 +50,13 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Email   string `json:"email"`
 		Token   string `json:"token"`
 		Refresh string `json:"refresh_token"`
+		Red     bool   `json:"is_chirpy_red"`
 	}{
 		ID:      user.ID,
 		Email:   user.Email,
 		Token:   authToken,
 		Refresh: refreshToken,
+		Red:     user.Red,
 	}
 
 	respondWithJSON(w, http.StatusOK, loginUserResp)

@@ -12,11 +12,13 @@ import (
 type request struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Red      bool   `json:"is_chirpy_red"`
 }
 
 type response struct {
 	ID    int    `json:"id"`
 	Email string `json:"email"`
+	Red   bool   `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +48,7 @@ func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
 	newUserResp := response{
 		ID:    newUser.ID,
 		Email: newUser.Email,
+		Red:   newUser.Red,
 	}
 
 	respondWithJSON(w, http.StatusCreated, newUserResp)
@@ -78,7 +81,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updatedUser, err := cfg.DB.UpdateUser(userID, request.Email, pwHash)
+	updatedUser, err := cfg.DB.UpdateUserInfo(userID, request.Email, pwHash)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "unable to update user")
 		return
@@ -87,6 +90,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 	updatedUserResp := response{
 		ID:    updatedUser.ID,
 		Email: updatedUser.Email,
+		Red:   updatedUser.Red,
 	}
 
 	respondWithJSON(w, http.StatusOK, updatedUserResp)
