@@ -61,7 +61,7 @@ func (db *DB) DeleteChirp(chirpID, userID int) error {
 }
 
 // Return an array of all chirps in the database.
-func (db *DB) GetChirps() ([]Chirp, error) {
+func (db *DB) GetChirps(userID int, sortOrder string) ([]Chirp, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return []Chirp{}, err
@@ -69,12 +69,22 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 
 	chirpSlice := []Chirp{}
 	for _, v := range dbStruct.Chirps {
-		chirpSlice = append(chirpSlice, v)
+		if userID == 0 {
+			chirpSlice = append(chirpSlice, v)
+		} else if userID == v.AuthorID {
+			chirpSlice = append(chirpSlice, v)
+		}
 	}
 
-	slices.SortFunc(chirpSlice, func(a, b Chirp) int {
-		return cmp.Compare(a.ID, b.ID)
-	})
+	if sortOrder == "desc" {
+		slices.SortFunc(chirpSlice, func(a, b Chirp) int {
+			return cmp.Compare(b.ID, a.ID)
+		})
+	} else {
+		slices.SortFunc(chirpSlice, func(a, b Chirp) int {
+			return cmp.Compare(a.ID, b.ID)
+		})
+	}
 	return chirpSlice, nil
 }
 

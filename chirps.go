@@ -10,7 +10,14 @@ import (
 )
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.DB.GetChirps()
+	userID, err := strconv.Atoi(r.URL.Query().Get("author_id"))
+	if err != nil {
+		userID = 0
+	}
+
+	sortOrder := r.URL.Query().Get("sort")
+
+	chirps, err := cfg.DB.GetChirps(userID, sortOrder)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
